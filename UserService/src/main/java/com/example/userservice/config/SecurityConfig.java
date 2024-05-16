@@ -18,9 +18,9 @@ public class SecurityConfig {
     private JwtRequestFilter jwtRequestFilter;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf->csrf.ignoringRequestMatchers("/auth/register", "/auth/**"));
+        http.csrf(csrf->csrf.ignoringRequestMatchers("api/auth/register", "api/auth/**"));
         http.authorizeHttpRequests(auth->auth
-                .requestMatchers("/auth/register", "/auth/login").permitAll()//nhung links nay khong can authenticate
+                .requestMatchers("api/auth/register", "api/auth/login", "api/auth/logout").permitAll()//nhung links nay khong can authenticate
                 .requestMatchers("/h2-console/**").permitAll()
                 .anyRequest().authenticated()
         );

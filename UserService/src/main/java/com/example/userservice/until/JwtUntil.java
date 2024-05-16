@@ -18,13 +18,13 @@ import java.util.Date;
 @Component
 public class JwtUntil {
     private static Logger logger = LoggerFactory.getLogger(JwtUntil.class);
-    private static final String SECRET = "SECRET";
+    private static final String SECRET = "The secret for the final project of the Software Architecture and Design course";
     public String generateToken(UserPrincipal user){
         String token = null;
         try {
             JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder();
 
-            builder.claim(user.getUsername(), user);
+            builder.claim("USER", user);
             builder.expirationTime(generateExpirationDate());
             JWTClaimsSet claimsSet = builder.build();
 
@@ -37,6 +37,7 @@ public class JwtUntil {
             logger.error(e.getMessage());
         }
         return token;
+
     }
     public Date generateExpirationDate() {
         return new Date(System.currentTimeMillis() + 864000000);
@@ -60,10 +61,18 @@ public class JwtUntil {
         UserPrincipal user = null;
         try {
             JWTClaimsSet claims = getClaimsFromToken(token);
-            if (claims != null && isTokenExpired(claims)) {
-                JSONObject jsonObject = (JSONObject) claims.getClaim("USER");
-                user = new ObjectMapper()
-                        .readValue(jsonObject.toJSONString(),UserPrincipal.class);
+            if (claims != null) {
+                logger.info("Claims: " + claims.toString());
+                logger.info("isTokenExpired: " + isTokenExpired(claims));
+                if (!isTokenExpired(claims)) {
+                    JSONObject jsonObject = (JSONObject) claims.getClaim("USER");
+                        logger.info("User JSON: " + jsonObject.toJSONString());
+                    user = new ObjectMapper().readValue(jsonObject.toJSONString(), UserPrincipal.class);
+                } else {
+                    logger.info("Token has expired");
+                }
+            } else {
+                logger.info("Claims are null");
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -76,6 +85,5 @@ public class JwtUntil {
     }
 
     private boolean isTokenExpired(JWTClaimsSet claims) {
-        return getExpirationDateFromToken(claims).after(new Date());
-    }
-}
+        return !getExpirationDateFromToken(claims).before(new Date());
+    }}

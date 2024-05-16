@@ -37,14 +37,13 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         final String authorizationHeader
                 = request.getHeader("Authorization");
-        System.out.println(authorizationHeader);
+        System.out.println("Authorization Header: " + authorizationHeader);
 
         UserPrincipal user = null;
         Token token = null;
 
         if (StringUtils.hasText(authorizationHeader) &&
                 authorizationHeader.startsWith("Bearer ")) {
-            System.out.println("running1");
             String jwt = authorizationHeader.substring(7);
 
             user = jwtUtil.getUserFromToken(jwt);
@@ -52,7 +51,6 @@ public class JwtRequestFilter extends OncePerRequestFilter {
         }
 
         if (null != user && null != token && token.getTokenExpDate().after(new Date())) {
-            System.out.println("running2");
             Set<GrantedAuthority> authorities = new HashSet<>();
 
             user.getAuthorities().forEach(
@@ -66,6 +64,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
         filterChain.doFilter(request, response);
-        System.out.println("running");
     }
+
+
 }

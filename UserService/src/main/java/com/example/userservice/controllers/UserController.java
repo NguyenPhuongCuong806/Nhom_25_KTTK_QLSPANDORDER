@@ -6,32 +6,47 @@ import com.example.userservice.models.User;
 import com.example.userservice.services.TokenService;
 import com.example.userservice.services.UserService;
 import com.example.userservice.until.JwtUntil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/auth")
 public class UserController {
     @Autowired
-    private UserService userService;
+    UserService userService;
     @Autowired
-    private JwtUntil jwtUntil;
+    JwtUntil jwtUntil;
     @Autowired
-    private TokenService tokenService;
+    TokenService tokenService;
     @PostMapping(value = "/register", consumes = "application/json")
-    public ResponseEntity<String> createUser(@RequestBody User user){
+    public ResponseEntity<Map<String, Object>> createUser(@RequestBody User user){
         user.setPassword(new BCryptPasswordEncoder().encode(user.getPassword()));
         userService.createUser(user);
-        return ResponseEntity.status(HttpStatus.OK).body("{\"status\": 200, \"create\": \"ok\"}");
+
+        Map<String, Object> userReponse = new HashMap<>();
+        userReponse.put("status",200);
+        userReponse.put("message","User created successfully");
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("username", user.getUsername());
+        userInfo.put("email", user.getEmail());
+        userInfo.put("dob", user.getDob());
+        userReponse.put("user", userInfo);
+        return ResponseEntity.status(HttpStatus.OK).body(userReponse);
     }
     @PostMapping(value = "/login", consumes = "application/json")
     public ResponseEntity<?> login(@RequestBody User user, HttpSession httpSession){
@@ -42,7 +57,7 @@ public class UserController {
         Token token = new Token();
         token.setToken(jwtUntil.generateToken(userPrincipal));
         token.setTokenExpDate(jwtUntil.generateExpirationDate());
-        token.setCreateBy(userPrincipal.getUserid());
+        token.setCreateBy(userPrincipal.getId());
         tokenService.createToken(token);
 
         httpSession.setAttribute("token", token.getToken());
@@ -52,6 +67,38 @@ public class UserController {
 
         return ResponseEntity.ok(userTokenResponse);
     }
+    @PostMapping(value = "/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request, HttpSession session) {
+        String authorizationHeader = request.getHeader("Authorization");
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token is missing or invalid");
+        }
+        String tokenValue = authorizationHeader.substring(7);
+        System.out.println("Token Value: " + tokenValue);
+        Token token = tokenService.findByToken(tokenValue);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No user is logged in");
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("authentication: " + authentication);
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User is not authenticated");
+        }
+
+        UserPrincipal user = (UserPrincipal) authentication.getPrincipal();
+        if (!token.getCreateBy().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Token does not belong to the authenticated user");
+        }
+
+        tokenService.deleteToken(token);
+        session.invalidate();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 200);
+        response.put("message", "User logged out successfully");
+        return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
     @Setter
     @Getter
     public class UserTokenResponse {

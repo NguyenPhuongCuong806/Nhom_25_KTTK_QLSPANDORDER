@@ -24,7 +24,7 @@ public class UserServiceImpl implements UserService{
         UserPrincipal userPrincipal = new UserPrincipal();
         if(user!=null){
             Set<String> authorities = new HashSet<>();
-            userPrincipal.setUserid(user.getId());
+            userPrincipal.setId(user.getId());
             userPrincipal.setUsername(user.getUsername());
             userPrincipal.setPassword(user.getPassword());
             userPrincipal.setEmail(user.getEmail());
