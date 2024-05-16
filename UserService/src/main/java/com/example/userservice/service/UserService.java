@@ -1,2 +1,16 @@
-package com.example.userservice.service;public class UserService {
+package com.example.userservice.service;
+
+import com.example.userservice.modules.User;
+import com.example.userservice.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserService {
+    @Autowired
+    private UserRepository userRepository;
+
+    public User userRegister(User user){
+        return userRepository.save(user);
+    }
 }
