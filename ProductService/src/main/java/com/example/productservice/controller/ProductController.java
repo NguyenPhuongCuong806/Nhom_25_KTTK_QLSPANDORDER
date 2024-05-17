@@ -68,7 +68,30 @@ public class ProductController {
         }
     }
 
-    @PostMapping(value = "/find-by-id/{id}")
+    @DeleteMapping(value = "/delete/{id}")
+    public ResponseEntity<Product> deleteProduct(@PathVariable("id") Long productId,HttpServletRequest servletRequest){
+        RestTemplate restTemplate = new RestTemplate();
+        String fooResourceUrl
+                = "http://localhost:8080/api/user/check-jwt";
+        String inputheader =  servletRequest.getHeader("Authorization");
+        HttpHeaders headers = new HttpHeaders();
+        if(inputheader == null || !inputheader.startsWith("Bearer ")){
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }else {
+            headers.set("Authorization", inputheader);
+            HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+            if(response.getBody() != null){
+                return ResponseEntity.ok(productService.deleteProduct(productId));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+
+        }
+    }
+
+    @GetMapping(value = "/find-by-id/{id}")
     public ResponseEntity<Product> findProductById(@PathVariable("id") Long productId) throws JsonProcessingException {
         return ResponseEntity.status(HttpStatus.OK).body(productService.findProductById(productId));
     }

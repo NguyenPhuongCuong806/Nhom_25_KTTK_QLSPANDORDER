@@ -58,10 +58,13 @@ public class UserController {
             if(jwt != null){
                 String userEmail = jwtService.extractUsername(jwt);
                 if(userEmail != null){
-                    return ResponseEntity.status(HttpStatus.OK).body(userEmail);
+                    Optional<User> optionalUser = userRepository.findUserByEmail(userEmail);
+                    return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get().getId().toString());
                 }
             }
         }
         return ResponseEntity.status(HttpStatus.OK).body("not found");
     }
+
+
 }

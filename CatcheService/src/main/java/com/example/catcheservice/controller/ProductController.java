@@ -32,7 +32,7 @@ public class ProductController {
     @PutMapping("/update-by-id")
     public ResponseEntity<String> updateById(@RequestBody Product product) {
         if (productRepository.existsById(product.getId())) {
-            productRepository.save(product);
+            productRepository.update(product);
             return ResponseEntity.status(HttpStatus.OK).body("update product in catches is success!");
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Not found product in catches!");
