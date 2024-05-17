@@ -2,13 +2,12 @@ package com.example.orderservice.controller;
 
 import com.example.orderservice.model.Order;
 import com.example.orderservice.services.OrderServices;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/order")
@@ -16,28 +15,96 @@ public class OrderController {
     @Autowired
     private OrderServices orderServices;
 
-    @PostMapping(value = "/create",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Boolean> createOrder(@RequestBody Order order){
-        return ResponseEntity.ok(orderServices.createOrder(order));
+    @PostMapping(value = "/create/{id}")
+    public ResponseEntity<Order> createOrder(@PathVariable("id") Long userId, HttpServletRequest servletRequest) throws JsonProcessingException {
+        RestTemplate restTemplate = new RestTemplate();
+        String fooResourceUrl
+                = "http://localhost:8080/api/user/check-jwt";
+        String inputheader = servletRequest.getHeader("Authorization");
+        HttpHeaders headers = new HttpHeaders();
+        if (inputheader == null || !inputheader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        } else {
+            headers.set("Authorization", inputheader);
+            HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+            if (response.getBody() != null) {
+                return ResponseEntity.ok(orderServices.createOrder(userId,servletRequest));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
     }
 
-    @PostMapping(value = "/update",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Boolean> updateOrder(@RequestBody Order order){
-        return ResponseEntity.ok(orderServices.updateOrder(order));
+    @GetMapping(value = "/paid/{id}")
+    public ResponseEntity<Order> paidOrder(@PathVariable("id") Long orderId,
+                                             HttpServletRequest servletRequest){
+        RestTemplate restTemplate = new RestTemplate();
+        String fooResourceUrl
+                = "http://localhost:8080/api/user/check-jwt";
+        String inputheader = servletRequest.getHeader("Authorization");
+        HttpHeaders headers = new HttpHeaders();
+        if (inputheader == null || !inputheader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        } else {
+            headers.set("Authorization", inputheader);
+            HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+            if (response.getBody() != null) {
+                return ResponseEntity.ok(orderServices.paidOrder(orderId));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
     }
 
-    @PostMapping(value = "/paid",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Boolean> paidOrder(Long orderId){
-        return ResponseEntity.ok(orderServices.paidOrder(orderId));
+    @GetMapping(value = "/unpaid/{id}")
+    public ResponseEntity<Order> uppaidOrder(@PathVariable("id") Long orderId,
+                                               HttpServletRequest servletRequest
+                                               ){
+        RestTemplate restTemplate = new RestTemplate();
+        String fooResourceUrl
+                = "http://localhost:8080/api/user/check-jwt";
+        String inputheader = servletRequest.getHeader("Authorization");
+        HttpHeaders headers = new HttpHeaders();
+        if (inputheader == null || !inputheader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        } else {
+            headers.set("Authorization", inputheader);
+            HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+            if (response.getBody() != null) {
+                return ResponseEntity.ok(orderServices.unpaidOrder(orderId));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
     }
 
-    @PostMapping(value = "/unpaid",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Boolean> uppaidOrder(Long orderId){
-        return ResponseEntity.ok(orderServices.unpaidOrder(orderId));
-    }
+    @PostMapping(value = "/find-by-id/{id}",consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<Order> findOrderById(@PathVariable("id") Long orderId,
+                                               HttpServletRequest servletRequest
+                                               ){
+        RestTemplate restTemplate = new RestTemplate();
+        String fooResourceUrl
+                = "http://localhost:8080/api/user/check-jwt";
+        String inputheader = servletRequest.getHeader("Authorization");
+        HttpHeaders headers = new HttpHeaders();
+        if (inputheader == null || !inputheader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        } else {
+            headers.set("Authorization", inputheader);
+            HttpEntity<?> httpEntity = new HttpEntity<>(headers);
 
-    @PostMapping(value = "/find-by-id",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Order> findOrderById(Long orderId){
-        return ResponseEntity.ok(orderServices.findOrderById(orderId));
+            ResponseEntity<String> response = restTemplate.exchange(
+                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+            if (response.getBody() != null) {
+                return ResponseEntity.ok(orderServices.findOrderById(orderId));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
     }
 }

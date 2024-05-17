@@ -118,4 +118,8 @@ public class CartService {
         return null;
     }
 
+    public List<Cart> findAllCartByCustomerId(Long customerId){
+        return cartResponsitory.findAllByCustomerId(customerId);
+    }
+
 }

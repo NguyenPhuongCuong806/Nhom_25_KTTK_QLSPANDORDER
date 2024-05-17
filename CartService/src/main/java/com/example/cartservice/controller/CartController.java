@@ -8,6 +8,8 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/cart")
 public class CartController {
@@ -79,6 +81,31 @@ public class CartController {
     @GetMapping(value = "/find-by-id/{id}")
     public ResponseEntity<Cart> findCartById(@PathVariable("id") Long cartId){
         return ResponseEntity.ok(cartService.findCartById(cartId));
+    }
+
+    @GetMapping(value = "/find-all-by-customerId/{id}")
+    public ResponseEntity<List<Cart>> findAllCartByCustomerId(@PathVariable("id") Long customerId,
+                                                              HttpServletRequest servletRequest
+                                                              ){
+        RestTemplate restTemplate = new RestTemplate();
+        String fooResourceUrl
+                = "http://localhost:8080/api/user/check-jwt";
+        String inputheader = servletRequest.getHeader("Authorization");
+        HttpHeaders headers = new HttpHeaders();
+        if (inputheader == null || !inputheader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        } else {
+            headers.set("Authorization", inputheader);
+            HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+            if (response.getBody() != null) {
+                Long userId = Long.parseLong(response.getBody());
+                return ResponseEntity.ok(cartService.findAllCartByCustomerId(customerId));
+            }
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+        }
     }
 
 
