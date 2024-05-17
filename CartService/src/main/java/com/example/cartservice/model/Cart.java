@@ -13,9 +13,11 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long customerId;
 
-    @ElementCollection
-    private List<Long> productId;
+    private Long productId;
+    private Long quanTiTy;
+    private Double price;
 
 }

@@ -16,6 +16,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long customerId;
-    private Long cartId;
+    private double total;
     private OrderEnum status;
+
+    @OneToMany(mappedBy = "order")
+    private List<DetailOrder> detailOrders;
 }
