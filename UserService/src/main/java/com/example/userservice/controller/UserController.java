@@ -8,7 +8,6 @@ import com.example.userservice.service.JwtService;
 import com.example.userservice.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -16,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -31,25 +32,31 @@ public class UserController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<User> userRegister(@RequestBody User user){
+    public ResponseEntity<?> userRegister(@RequestBody User user){
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userService.userRegister(user);
-        return ResponseEntity.status(HttpStatus.OK).body(user);
+        User respone = userService.userRegister(user);
+        if(respone != null) {
+            return ResponseEntity.status(HttpStatus.OK).body(user);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User exists");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(
+    public ResponseEntity<?> login(
             @RequestBody LoginDTO request, HttpServletResponse response
     ){
         String jwtToken = authenticationService.login(request);
         if(jwtToken != null){
-            return ResponseEntity.status(HttpStatus.OK).body(jwtToken);
+            Map<String, Object> reponse = new HashMap<>();
+            reponse.put("user",userService.findUserByEmail(request.getEmail()));
+            reponse.put("token",jwtToken);
+            return ResponseEntity.status(HttpStatus.OK).body(reponse);
         }
         return  ResponseEntity.status(HttpStatus.NOT_FOUND).body(jwtToken);
     }
 
     @PostMapping("/check-jwt")
-    public ResponseEntity<String> checkJWT(HttpServletRequest servletRequest){
+    public ResponseEntity<?> checkJWT(HttpServletRequest servletRequest){
         String headerJwt = servletRequest.getHeader("Authorization");
         if(headerJwt == null || !headerJwt.startsWith("Bearer ")){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
@@ -59,11 +66,13 @@ public class UserController {
                 String userEmail = jwtService.extractUsername(jwt);
                 if(userEmail != null){
                     Optional<User> optionalUser = userRepository.findUserByEmail(userEmail);
-                    return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get().getId().toString());
+                    Map<String, Object> reponse = new HashMap<>();
+                    reponse.put("user",optionalUser);
+                    return ResponseEntity.status(HttpStatus.OK).body(reponse);
                 }
             }
         }
-        return ResponseEntity.status(HttpStatus.OK).body("not found");
+        return ResponseEntity.status(HttpStatus.OK).body("Not found");
     }
 
 

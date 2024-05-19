@@ -13,24 +13,24 @@ spring:
               - DELETE
       routes:
       - id: UserService
-          uri: http://localhost:8080
-          predicates:
-            - Path=/api/auth/**
-          filters:
+        uri: http://localhost:8080
+        predicates:
+          - Path=/api/user/**
+        filters:
             - AuthenticationFilter
       - id: CatcheService
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/order/**
+        uri: http://localhost:8081
+        predicates:
+          - Path=/api/order/**
       - id: ProductService
-          uri: http://localhost:8082
-          predicates:
-            - Path=/api/product/**
+        uri: http://localhost:8082
+        predicates:
+          - Path=/api/product/**
       - id: CartService
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/cart/**
+        uri: http://localhost:8083
+        predicates:
+          - Path=/api/cart/**
       - id: OrderService
-          uri: http://localhost:8084
-          predicates:
-            - Path=/api/order/**
+        uri: http://localhost:8084
+        predicates:
+          - Path=/api/order/**

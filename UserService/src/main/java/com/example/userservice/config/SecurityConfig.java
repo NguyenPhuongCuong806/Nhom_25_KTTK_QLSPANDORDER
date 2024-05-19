@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         (auth) -> auth
                                 .requestMatchers("/api/user/register","/api/user/login"
-                                ,"/api/user/check-jwt"
+                                        ,"/api/user/check-jwt"
                                 ).permitAll()
                                 .anyRequest().authenticated()
 
@@ -59,20 +59,5 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthentication, UsernamePasswordAuthenticationFilter.class);
         return http.build();
-    }
-
-    private AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
-        authenticationProvider.setUserDetailsService(userService);
-        authenticationProvider.setPasswordEncoder(passwordEncoder());
-        return authenticationProvider;
-    }
-
-    private PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-    @Bean
-    public AuthenticationManager authenticationManager (AuthenticationConfiguration configuration) throws Exception{
-        return configuration.getAuthenticationManager();
     }
 }
