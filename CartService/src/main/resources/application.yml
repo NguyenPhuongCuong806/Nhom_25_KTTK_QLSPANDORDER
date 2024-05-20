@@ -1,0 +1,6 @@
+resilience4j:
+  retry:
+    instances:
+      cartService:
+        max-attempts: 5
+        wait-duration: 5s

@@ -97,6 +97,7 @@ public class ProductController {
     }
 
     @GetMapping(value = "/find-all")
+
     public ResponseEntity<List<Product>> findAllProduct(){
         return ResponseEntity.status(HttpStatus.OK).body(productService.findAllProduct());
     }

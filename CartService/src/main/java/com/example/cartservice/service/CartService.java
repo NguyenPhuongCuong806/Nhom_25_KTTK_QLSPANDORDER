@@ -4,12 +4,15 @@ import com.example.cartservice.model.Cart;
 import com.example.cartservice.responsitory.CartResponsitory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,7 +20,7 @@ import java.util.Optional;
 public class CartService {
     @Autowired
     private CartResponsitory cartResponsitory;
-
+    private int attempt=1;
     public boolean createCart(Cart cart){
         if(cart != null){
             cartResponsitory.save(cart);
@@ -42,8 +45,10 @@ public class CartService {
         }
         return null;
     }
-
+    @Retry(name = "cartService", fallbackMethod = "fallbackMethod")
     public Cart addProductinCart(Long productId,Long quantity,Long userId){
+        System.out.println("retry method called "+attempt++ +" times"+" at "+new Date());
+
         RestTemplate restTemplate = new RestTemplate();
         String urlFind
                 = "http://localhost:8082/api/product/find-by-id";
@@ -74,12 +79,18 @@ public class CartService {
             }
         } catch (HttpClientErrorException.NotFound e) {
             return null;
+        } catch (ResourceAccessException e) {
+            throw e;
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
-
+    public Cart fallbackMethod(Long productId, Long quantity, Long userId, Throwable t) {
+        System.out.println("Fallback method called due to: " + t.getMessage());
+        // Bạn có thể trả về một giá trị mặc định hoặc thông báo lỗi tùy theo yêu cầu của bạn
+        return null;
+    }
     public Cart deleteProductinCart(Long productId,Long quantity,Long userId){
         RestTemplate restTemplate = new RestTemplate();
         String urlFind
@@ -117,7 +128,6 @@ public class CartService {
         }
         return null;
     }
-
     public List<Cart> findAllCartByCustomerId(Long customerId){
         return cartResponsitory.findAllByCustomerId(customerId);
     }
