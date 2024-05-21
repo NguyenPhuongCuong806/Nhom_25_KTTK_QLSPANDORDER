@@ -1,5 +1,7 @@
 package com.example.userservice.service;
 
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -30,8 +32,10 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+
     //Mã hóa data từ token
     private Claims extractAllClaims(String token){
+
         return Jwts
                 .parserBuilder()
                 .setSigningKey(getSignKey())
@@ -46,8 +50,11 @@ public class JwtService {
         return claimsResoler.apply(claims);
     }
 
+    @Retryable(maxAttempts = 2, value = RuntimeException.class,
+            backoff = @Backoff(delay = 2000, multiplier = 2))
     //get username từ claim
     public String extractUsername(String token){
+        System.out.println("check log +++++");
         return extractClaim(token,Claims::getSubject);
     }
 
@@ -60,8 +67,6 @@ public class JwtService {
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toSet());
-
-        System.out.println("Authorities: " + authorities);
 
         extractClaims.put("authorities", authorities);
 
@@ -83,6 +88,7 @@ public class JwtService {
 
     //kiểm tra token
     //kiểm tra xem token có đúng không
+
     public boolean isTokenValid(String token,UserDetails userDetails){
         final String userName = extractUsername(token);
         return (userName.equals(userDetails.getUsername()))

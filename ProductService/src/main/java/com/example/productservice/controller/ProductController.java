@@ -4,7 +4,13 @@ import com.example.productservice.model.Product;
 import com.example.productservice.service.ProductService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
+import org.antlr.v4.runtime.misc.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -19,80 +25,107 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
+    @Value("${my.url.connect}")
+    private String urlConnect;
+
+
+    @Autowired
+    private CircuitBreakerFactory circuitBreakerFactory;
+
+
     @PostMapping(value = "/create",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Boolean> createProduct(@RequestBody Product product,HttpServletRequest servletRequest){
+    public ResponseEntity<?> createProduct(@RequestBody Product product,HttpServletRequest servletRequest){
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
-                = "http://localhost:8080/api/user/check-jwt";
+                = urlConnect;
         String inputheader =  servletRequest.getHeader("Authorization");
         HttpHeaders headers = new HttpHeaders();
         if(inputheader == null || !inputheader.startsWith("Bearer ")){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
 
         }else {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
-            if(response.getBody() != null){
-                return ResponseEntity.ok(productService.createProduct(product));
-            }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+                if(response.getStatusCodeValue() == 200){
+                    return ResponseEntity.ok(productService.createProduct(product));
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            }catch (Exception exception){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
 
+            }
         }
     }
 
     @PostMapping(value = "/update",consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Product> updateProduct(@RequestBody Product product,HttpServletRequest servletRequest){
+    public ResponseEntity<?> updateProduct(@RequestBody Product product,HttpServletRequest servletRequest){
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
-                = "http://localhost:8080/api/user/check-jwt";
+                = urlConnect;
         String inputheader =  servletRequest.getHeader("Authorization");
         HttpHeaders headers = new HttpHeaders();
         if(inputheader == null || !inputheader.startsWith("Bearer ")){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
 
         }else {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
-            if(response.getBody() != null){
-                return ResponseEntity.ok(productService.updateProduct(product));
-
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+                System.out.println("check data json"+response.getStatusCode());
+                if(response.getStatusCodeValue() == 200){
+                    return ResponseEntity.ok(productService.updateProduct(product));
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            }catch (Exception e){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
 
         }
     }
 
     @DeleteMapping(value = "/delete/{id}")
-    public ResponseEntity<Product> deleteProduct(@PathVariable("id") Long productId,HttpServletRequest servletRequest){
+    public ResponseEntity<?> deleteProduct(@PathVariable("id") Long productId,HttpServletRequest servletRequest){
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
-                = "http://localhost:8080/api/user/check-jwt";
+                = urlConnect;
+        CircuitBreaker circuitBreaker = circuitBreakerFactory.create("circuitbreaker");
         String inputheader =  servletRequest.getHeader("Authorization");
         HttpHeaders headers = new HttpHeaders();
         if(inputheader == null || !inputheader.startsWith("Bearer ")){
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
         }else {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
-            if(response.getBody() != null){
-                return ResponseEntity.ok(productService.deleteProduct(productId));
+            try {
+                return circuitBreaker.run(() -> {
+                            ResponseEntity<String> response = restTemplate.exchange(
+                                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+                            if(response.getStatusCodeValue() == 200){
+                                return ResponseEntity.ok(productService.deleteProduct(productId));
+                            }
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+                        },
+                        throwable -> {
+                            System.out.println("check circuitBreaker");
+                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("block HTTP from circuitBreaker");
+                        }
+                        );
+            }catch (Exception exception){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+
 
         }
     }
 
     @GetMapping(value = "/find-by-id/{id}")
-    public ResponseEntity<Product> findProductById(@PathVariable("id") Long productId) throws JsonProcessingException {
+    public ResponseEntity<?> findProductById(@PathVariable("id") Long productId) throws JsonProcessingException {
         return ResponseEntity.status(HttpStatus.OK).body(productService.findProductById(productId));
     }
 

@@ -1,0 +1,116 @@
+services:
+  dbmysql:
+    image: mysql
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+    ports:
+      - 3307:3306
+
+  dbredis:
+    image: redis
+    volumes:
+      - db-redis:/bitnami/redis/data
+    ports:
+      - 6380:6379
+
+  service-user:
+    image: service-user-img
+    build:
+      context: ../UserService
+    environment:
+      - HOST=dbmysql
+      - PORT=3306
+      - DB=userservice
+      - USER=root
+      - PASSWORD=123456
+    depends_on:
+      - dbmysql
+    ports:
+      - 8080:8080
+
+  service-product:
+
+    image: service-product-img
+    build:
+      context: ../ProductService
+    environment:
+      - HOST=dbmysql
+      - PORT=3306
+      - DB=productservice
+      - USER=root
+      - PASSWORD=123456
+    depends_on:
+      - dbmysql
+    ports:
+      - 8082:8082
+
+  service-catches:
+
+    image: service-catches-img
+    build:
+      context: ../CatcheService
+    environment:
+      - HOST=dbredis
+      - PORT=6379
+    depends_on:
+      - dbredis
+    ports:
+      - 8081:8081
+
+  service-cart:
+
+    image: service-cart-img
+    build:
+      context: ../CartService
+    environment:
+      - HOST=dbmysql
+      - PORT=3306
+      - DB=cartservice
+      - USER=root
+      - PASSWORD=123456
+    depends_on:
+      - dbmysql
+    ports:
+      - 8083:8083
+
+  service-order:
+
+    image: service-order-img
+    build:
+      context: ../OrderService
+    environment:
+      - HOST=dbmysql
+      - PORT=3306
+      - DB=orderservice
+      - USER=root
+      - PASSWORD=123456
+    depends_on:
+      - dbmysql
+    ports:
+      - 8084:8084
+
+  service-apigateway:
+
+    image: service-apigateway-img
+    build:
+      context: ../ApiGateWay
+    depends_on:
+      - service-user
+      - service-product
+      - service-catches
+      - service-cart
+      - service-order
+    environment:
+      - USERSERVICE=service-user
+      - PRODUCTSERVICE=service-product
+      - CATCHESSERVICE=service-catches
+      - CARTSERVICE=service-cart
+      - ORDERSERVICE=service-order
+    ports:
+      - 5000:5000
+
+volumes:
+  db-data:
+  db-redis:
