@@ -25,7 +25,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ../../UserService
-          file: ../../UserService/Dockerfile
+          context: ./UserService
+          file: ./UserService/Dockerfile
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/kttk-ck:latest
