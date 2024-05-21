@@ -1,8 +1,7 @@
 FROM openjdk:17-jdk-alpine
-EXPOSE 8080
-ARG JAR_FILE=target/UserService-0.0.1-SNAPSHOT.jar
-ADD ${JAR_FILE} app.jar
-ENTRYPOINT ["java","-jar","/app.jar"]
+WORKDIR /app
+COPY target/UserService-0.0.1-SNAPSHOT.jar .
+CMD ["java", "-jar", "UserService-0.0.1-SNAPSHOT.jar"]
 
 ## Use an official Maven image as the base image
 #FROM maven:3.8.4-openjdk-17-jdk-alpine AS build
