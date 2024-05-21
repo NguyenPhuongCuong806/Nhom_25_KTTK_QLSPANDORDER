@@ -49,7 +49,7 @@ public class UserController {
     }
 
 
-    @PostMapping("/register")
+    @PostMapping("/registers")
     public ResponseEntity<User> userRegister(@RequestBody User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userService.userRegister(user);
