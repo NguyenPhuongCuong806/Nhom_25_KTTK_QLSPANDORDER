@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .authorizeHttpRequests(
                         (auth) -> auth
-                                .requestMatchers("/api/user/register","/api/user/login"
+                                .requestMatchers("/api/user/registers","/api/user/login"
                                 ,"/api/user/check-jwt"
                                 ).permitAll()
                                 .anyRequest().authenticated()

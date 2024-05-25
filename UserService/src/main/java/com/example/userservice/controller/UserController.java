@@ -59,8 +59,8 @@ public class UserController {
     @PostMapping("/registers")
     public ResponseEntity<User> userRegister(@RequestBody User user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userService.userRegister(user);
-        return ResponseEntity.status(HttpStatus.OK).body(user);
+        User user1 = userService.userRegister(user);
+        return ResponseEntity.status(HttpStatus.OK).body(user1);
     }
 
     @PostMapping("/login")
