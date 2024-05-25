@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.aspectj.weaver.ast.Or;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -29,6 +30,9 @@ public class OrderServices {
     private OrderResponsitory orderResponsitory;
     private final DetailOrderRepository detailOrderRepository;
 
+    @Value("${my.url.find-all-cart-by-customerId}")
+    private String urlfindAllCart;
+
     public Order createOrder(Long userId, HttpServletRequest servletRequest) throws JsonProcessingException {
         RestTemplate restTemplate = new RestTemplate();
 
@@ -41,7 +45,7 @@ public class OrderServices {
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
 
             String urlchild
-                    = "http://localhost:8083/api/cart/find-all-by-customerId";
+                    = urlfindAllCart;
             ResponseEntity<String> response = restTemplate.exchange(
                     urlchild + "/" + userId, HttpMethod.GET, httpEntity, String.class);
             ObjectMapper objectMapper = new ObjectMapper();

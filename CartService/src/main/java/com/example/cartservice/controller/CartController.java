@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
@@ -19,7 +20,10 @@ import java.util.List;
 public class CartController {
     @Autowired
     private CartService cartService;
-    ObjectMapper objectMapper = new ObjectMapper();
+    
+    @Value("${my.url.connect}")
+    private String urlConnect;
+
     @PostMapping(value = "/create",consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Boolean> createCart(@RequestBody Cart cart){
         return ResponseEntity.ok(cartService.createCart(cart));
@@ -30,13 +34,13 @@ public class CartController {
         return ResponseEntity.ok(cartService.updateCart(cart));
     }
     @PostMapping(value = "/add-product")
-    public ResponseEntity<Cart> addProduct(@RequestParam("productId") Long productId
+    public ResponseEntity<?> addProduct(@RequestParam("productId") Long productId
             ,@RequestParam("quantity") Long quantity,
                                            HttpServletRequest servletRequest
                                            ) throws JsonProcessingException {
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
-                = "http://localhost:8080/api/user/check-jwt";
+                = urlConnect;
         String inputheader = servletRequest.getHeader("Authorization");
         HttpHeaders headers = new HttpHeaders();
         if (inputheader == null || !inputheader.startsWith("Bearer ")) {
@@ -44,26 +48,29 @@ public class CartController {
         } else {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
-
-            ResponseEntity<String> response = restTemplate.exchange(
-                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
-            if (response.getBody() != null) {
-                JsonNode jsonNode = objectMapper.readTree(response.getBody());
-                Long userId = jsonNode.get("user").get("id").asLong();
-                return ResponseEntity.ok(cartService.addProductinCart(productId, quantity,userId));
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+                if (response.getStatusCodeValue() == 200) {
+                    Long userId = Long.parseLong(response.getBody());
+                    return ResponseEntity.ok(cartService.addProductinCart(productId, quantity,userId));
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("not authentication");
+            }catch (Exception exception){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+
         }
     }
 
     @PostMapping(value = "/delete-product-in-cart")
-    public ResponseEntity<Cart> deleteProduct(@RequestParam("productId") Long productId
+    public ResponseEntity<?> deleteProduct(@RequestParam("productId") Long productId
             ,@RequestParam("quantity") Long quantity,
                                            HttpServletRequest servletRequest
     ) throws JsonProcessingException {
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
-                = "http://localhost:8080/api/user/check-jwt";
+                = urlConnect;
         String inputheader = servletRequest.getHeader("Authorization");
         HttpHeaders headers = new HttpHeaders();
         if (inputheader == null || !inputheader.startsWith("Bearer ")) {
@@ -71,15 +78,19 @@ public class CartController {
         } else {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+                if (response.getStatusCodeValue() == 200) {
+                    Long userId = Long.parseLong(response.getBody());
+                    return ResponseEntity.ok(cartService.deleteProductinCart(productId, quantity,userId));
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("not authentication");
+            }catch (Exception exception){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
-            if (response.getBody() != null) {
-                JsonNode jsonNode = objectMapper.readTree(response.getBody());
-                Long userId = jsonNode.get("user").get("id").asLong();
-                return ResponseEntity.ok(cartService.deleteProductinCart(productId, quantity,userId));
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+
         }
     }
 
@@ -88,12 +99,12 @@ public class CartController {
         return ResponseEntity.ok(cartService.findCartById(cartId));
     }
     @GetMapping(value = "/find-all-by-customerId/{id}")
-    public ResponseEntity<List<Cart>> findAllCartByCustomerId(@PathVariable("id") Long customerId,
+    public ResponseEntity<?> findAllCartByCustomerId(@PathVariable("id") Long customerId,
                                                               HttpServletRequest servletRequest
                                                               ){
         RestTemplate restTemplate = new RestTemplate();
         String fooResourceUrl
-                = "http://localhost:8080/api/user/check-jwt";
+                = urlConnect;
         String inputheader = servletRequest.getHeader("Authorization");
         HttpHeaders headers = new HttpHeaders();
         if (inputheader == null || !inputheader.startsWith("Bearer ")) {
@@ -101,14 +112,19 @@ public class CartController {
         } else {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
+                if (response.getStatusCodeValue() == 200) {
+                    Long userId = Long.parseLong(response.getBody());
+                    return ResponseEntity.ok(cartService.findAllCartByCustomerId(customerId));
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            }catch (Exception e){
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
 
-            ResponseEntity<String> response = restTemplate.exchange(
-                    fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
-            if (response.getBody() != null) {
-
-                return ResponseEntity.ok(cartService.findAllCartByCustomerId(customerId));
             }
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+
         }
     }
 

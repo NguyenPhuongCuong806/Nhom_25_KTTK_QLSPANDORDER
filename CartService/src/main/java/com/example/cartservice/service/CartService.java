@@ -4,8 +4,9 @@ import com.example.cartservice.model.Cart;
 import com.example.cartservice.responsitory.CartResponsitory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.resilience4j.retry.annotation.Retry;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -15,12 +16,17 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class CartService {
     @Autowired
     private CartResponsitory cartResponsitory;
-    private int attempt=1;
+
+    @Value("${my.url.product.find-by-id}")
+    private String urlProductfindById;
+
     public boolean createCart(Cart cart){
         if(cart != null){
             cartResponsitory.save(cart);
@@ -45,36 +51,35 @@ public class CartService {
         }
         return null;
     }
-    @Retry(name = "cartService", fallbackMethod = "fallbackMethod")
-    public Cart addProductinCart(Long productId,Long quantity,Long userId){
-        System.out.println("retry method called "+attempt++ +" times"+" at "+new Date());
 
+    public String addProductinCart(Long productId,Long quantity,Long userId){
         RestTemplate restTemplate = new RestTemplate();
         String urlFind
-                = "http://localhost:8082/api/product/find-by-id";
+                = urlProductfindById;
         try {
             String productCatches = restTemplate.getForObject(urlFind + "/" + productId, String.class);
             ObjectMapper objectMapper = new ObjectMapper();
+
             if (productCatches != null) {
                 try {
-                    JsonNode jsonNode = objectMapper.readTree(productCatches);
+                    JsonNode jsonNode = objectMapper.readTree(convertToJson(productCatches));
                     long id = jsonNode.get("id").asLong();
                     double price = jsonNode.get("price").asDouble();
                     Optional<Cart> optionalCart = cartResponsitory.findCartByCustomerIdAndProductId(userId,productId);
                     if(optionalCart.isPresent()){
                         optionalCart.get().setQuanTiTy(optionalCart.get().getQuanTiTy() + quantity);
                         optionalCart.get().setPrice(optionalCart.get().getPrice() + quantity*price);
-                        return cartResponsitory.save(optionalCart.get());
+                        return cartResponsitory.save(optionalCart.get())+"";
                     }else {
                         Cart cart = new Cart();
                         cart.setProductId(id);
                         cart.setPrice(price*quantity);
                         cart.setCustomerId(userId);
                         cart.setQuanTiTy(quantity);
-                        return cartResponsitory.save(cart);
+                        return cartResponsitory.save(cart)+"";
                     }
                 }catch (Exception exception){
-                    return null;
+                    return "add fail";
                 }
             }
         } catch (HttpClientErrorException.NotFound e) {
@@ -83,46 +88,43 @@ public class CartService {
             throw e;
         } catch (Exception e) {
             e.printStackTrace();
+            return "add fail";
         }
         return null;
     }
-    public Cart fallbackMethod(Long productId, Long quantity, Long userId, Throwable t) {
-        System.out.println("Fallback method called due to: " + t.getMessage());
-        // Bạn có thể trả về một giá trị mặc định hoặc thông báo lỗi tùy theo yêu cầu của bạn
-        return null;
-    }
-    public Cart deleteProductinCart(Long productId,Long quantity,Long userId){
+
+    public String deleteProductinCart(Long productId,Long quantity,Long userId){
         RestTemplate restTemplate = new RestTemplate();
         String urlFind
-                = "http://localhost:8082/api/product/find-by-id";
+                = urlProductfindById;
         try {
             String productCatches = restTemplate.getForObject(urlFind + "/" + productId, String.class);
             ObjectMapper objectMapper = new ObjectMapper();
             if (productCatches != null) {
                 try {
-                    JsonNode jsonNode = objectMapper.readTree(productCatches);
-                    long id = jsonNode.get("id").asLong();
+                    JsonNode jsonNode = objectMapper.readTree(convertToJson(productCatches));
                     double price = jsonNode.get("price").asDouble();
                     Optional<Cart> optionalCart = cartResponsitory.findCartByCustomerIdAndProductId(userId,productId);
                     if(optionalCart.isPresent()){
                         if(quantity < optionalCart.get().getQuanTiTy()){
                             optionalCart.get().setQuanTiTy(optionalCart.get().getQuanTiTy() - quantity);
                             optionalCart.get().setPrice(optionalCart.get().getPrice() - quantity*price);
-                            return cartResponsitory.save(optionalCart.get());
+                            return cartResponsitory.save(optionalCart.get())+"";
                         }else if(quantity == optionalCart.get().getQuanTiTy()){
                             cartResponsitory.delete(optionalCart.get());
-                            return null;
+                            return "delete product success!";
                         }else {
-                            return null;
+                            return "quantity product not exactly";
                         }
                     }
-                    return null;
+                    return "not found product";
                 }catch (Exception exception){
-                    return null;
+                    System.out.println(exception);
+                    return "not found product";
                 }
             }
         } catch (HttpClientErrorException.NotFound e) {
-            return null;
+            return "not found product";
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -130,6 +132,22 @@ public class CartService {
     }
     public List<Cart> findAllCartByCustomerId(Long customerId){
         return cartResponsitory.findAllByCustomerId(customerId);
+    }
+
+    private static String convertToJson(String productString) {
+        // Sử dụng biểu thức chính quy để phân tích cú pháp chuỗi
+        Pattern pattern = Pattern.compile("Product\\(id=(\\d+), productName=([^,]+), price=([^,]+), description=(.*)\\)");
+        Matcher matcher = pattern.matcher(productString);
+
+        if (matcher.find()) {
+            long id = Long.parseLong(matcher.group(1));
+            String productName = matcher.group(2).trim();
+            double price = Double.parseDouble(matcher.group(3));
+            String description = matcher.group(4).trim();
+
+            return String.format("{\"id\":%d,\"productName\":\"%s\",\"price\":%f,\"description\":\"%s\"}", id, productName, price, description);
+        }
+        throw new IllegalArgumentException("Invalid product string format");
     }
 
 }

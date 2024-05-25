@@ -1,5 +1,6 @@
 package com.example.catcheservice.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
@@ -13,11 +14,17 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @Configuration
 @EnableRedisRepositories
 public class ConfigRedis {
+
+    @Value("${redis.host}")
+    private String host;
+    @Value("${redis.port}")
+    private String port;
+
     @Bean
     public JedisConnectionFactory connectionFactory() {
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration();
-        configuration.setHostName("localhost");
-        configuration.setPort(6379);
+        configuration.setHostName(host);
+        configuration.setPort(Integer.parseInt(port));
         return new JedisConnectionFactory(configuration);
     }
 
