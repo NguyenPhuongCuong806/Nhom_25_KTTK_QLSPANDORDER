@@ -35,6 +35,7 @@ public class UserController {
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final Bucket bucket;
+    private final Bucket checkjwtBucket;
 
     public UserController(PasswordEncoder passwordEncoder, AuthenticationService authenticationService, JwtService jwtService, UserRepository userRepository) {
         this.passwordEncoder = passwordEncoder;
@@ -43,6 +44,12 @@ public class UserController {
         this.userRepository = userRepository;
 
         Bandwidth limit = Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1)));
+        Bandwidth limit1 = Bandwidth.classic(4, Refill.greedy(4, Duration.ofSeconds(10)));
+
+        this.checkjwtBucket = Bucket.builder()
+                .addLimit(limit1)
+                .build();
+
         this.bucket = Bucket.builder()
                 .addLimit(limit)
                 .build();
@@ -83,7 +90,12 @@ public class UserController {
                     String userEmail = jwtService.extractUsername(jwt);
                     if (userEmail != null) {
                         Optional<User> optionalUser = userRepository.findUserByEmail(userEmail);
-                        return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get().getId().toString());
+                        if(checkjwtBucket.tryConsume(1)){
+                            return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get().getId().toString());
+                        }else {
+                            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("10s chỉ thực hiện 4 req");
+
+                        }
                     }
                 }catch (Exception exception){
                     throw new Exception("check jwt");

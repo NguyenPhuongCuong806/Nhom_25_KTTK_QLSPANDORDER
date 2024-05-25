@@ -16,7 +16,7 @@ services:
       - 6380:6379
 
   service-user:
-    image: service-user-img
+    image: cuongnguyen806/service-user-img
     build:
       context: ../UserService
     environment:
@@ -32,7 +32,7 @@ services:
 
   service-product:
 
-    image: service-product-img
+    image: cuongnguyen806/service-product-img
     build:
       context: ../ProductService
     environment:
@@ -48,7 +48,7 @@ services:
 
   service-catches:
 
-    image: service-catches-img
+    image: cuongnguyen806/service-catches-img
     build:
       context: ../CatcheService
     environment:
@@ -61,7 +61,7 @@ services:
 
   service-cart:
 
-    image: service-cart-img
+    image: cuongnguyen806/service-cart-img
     build:
       context: ../CartService
     environment:
@@ -77,7 +77,7 @@ services:
 
   service-order:
 
-    image: service-order-img
+    image: cuongnguyen806/service-order-img
     build:
       context: ../OrderService
     environment:
@@ -93,7 +93,7 @@ services:
 
   service-apigateway:
 
-    image: service-apigateway-img
+    image: cuongnguyen806/service-apigateway-img
     build:
       context: ../ApiGateWay
     depends_on:
