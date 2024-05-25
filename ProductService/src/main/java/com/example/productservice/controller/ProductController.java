@@ -112,8 +112,8 @@ public class ProductController {
                             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
                         },
                         throwable -> {
-                            System.out.println("check circuitBreaker");
-                            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("block HTTP from circuitBreaker");
+                            System.out.println("CircuitBreaker opened: " + throwable.getMessage());
+                            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Service is unavailable, please try again later");
                         }
                         );
             }catch (Exception exception){
