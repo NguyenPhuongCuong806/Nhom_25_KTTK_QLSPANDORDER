@@ -12,6 +12,8 @@ import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.http.*;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,7 +34,8 @@ public class ProductController {
     @Autowired
     private CircuitBreakerFactory circuitBreakerFactory;
 
-
+    @Retryable(maxAttempts = 2, value = RuntimeException.class,
+            backoff = @Backoff(delay = 3000, multiplier = 2))
     @PostMapping(value = "/create",consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> createProduct(@RequestBody Product product,HttpServletRequest servletRequest){
         RestTemplate restTemplate = new RestTemplate();
@@ -47,19 +50,14 @@ public class ProductController {
             headers.set("Authorization", inputheader);
             HttpEntity<?> httpEntity = new HttpEntity<>(headers);
 
-            try {
                 ResponseEntity<String> response = restTemplate.exchange(
                         fooResourceUrl, HttpMethod.POST, httpEntity, String.class);
                 if(response.getStatusCodeValue() == 200){
                     return ResponseEntity.ok(productService.createProduct(product));
                 }
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
-            }catch (Exception exception){
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("please login");
-
             }
         }
-    }
 
     @PostMapping(value = "/update",consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> updateProduct(@RequestBody Product product,HttpServletRequest servletRequest){

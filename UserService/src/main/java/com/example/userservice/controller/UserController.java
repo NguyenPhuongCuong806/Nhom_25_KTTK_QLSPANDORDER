@@ -9,6 +9,8 @@ import com.example.userservice.service.UserService;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,25 +35,16 @@ public class UserController {
     private final AuthenticationService authenticationService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
-    private final Bucket bucket;
-    private final Bucket checkjwtBucket;
+    private final RateLimiterRegistry rateLimiterRegistry;
 
-    public UserController(PasswordEncoder passwordEncoder, AuthenticationService authenticationService, JwtService jwtService, UserRepository userRepository) {
+    public UserController(PasswordEncoder passwordEncoder, AuthenticationService authenticationService, JwtService jwtService, UserRepository userRepository
+    , RateLimiterRegistry rateLimiterRegistry
+    ) {
         this.passwordEncoder = passwordEncoder;
         this.authenticationService = authenticationService;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
-
-        Bandwidth limit = Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1)));
-        Bandwidth limit1 = Bandwidth.classic(4, Refill.greedy(4, Duration.ofSeconds(10)));
-
-        this.checkjwtBucket = Bucket.builder()
-                .addLimit(limit1)
-                .build();
-
-        this.bucket = Bucket.builder()
-                .addLimit(limit)
-                .build();
+        this.rateLimiterRegistry = rateLimiterRegistry;
     }
 
 
@@ -63,20 +56,18 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(
+    @RateLimiter(name = "checkJwt",fallbackMethod = "createLoginFallback")
+    public ResponseEntity<String> login(
             @RequestBody LoginDTO request, HttpServletResponse response
     ) {
-        if (bucket.tryConsume(1)) {
             String jwtToken = authenticationService.login(request);
             if (jwtToken != null) {
                 return ResponseEntity.status(HttpStatus.OK).body(jwtToken);
             }
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Thông tin đăng nhập không đúng");
-        } else {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Vui lòng đợi thêm 1 phút để thực hiện");
-        }
     }
 
+    @RateLimiter(name = "checkJwt",fallbackMethod = "createCommentFallback")
     @PostMapping("/check-jwt")
     public ResponseEntity<String> checkJWT(HttpServletRequest servletRequest) throws Exception {
         String headerJwt = servletRequest.getHeader("Authorization");
@@ -86,16 +77,12 @@ public class UserController {
             String jwt = headerJwt.substring(7);
             if (jwt != null) {
                 try {
-                    String userEmail = jwtService.extractUsername(jwt);
-                    if (userEmail != null) {
-                        Optional<User> optionalUser = userRepository.findUserByEmail(userEmail);
-                        if(checkjwtBucket.tryConsume(1)){
+                        String userEmail = jwtService.extractUsername(jwt);
+                        if (userEmail != null) {
+                            Optional<User> optionalUser = userRepository.findUserByEmail(userEmail);
                             return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get().getId().toString());
-                        }else {
-                            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("10s chỉ thực hiện 4 req");
-
                         }
-                    }
+
                 }catch (Exception exception){
                     throw new Exception("check jwt");
                 }
@@ -103,5 +90,15 @@ public class UserController {
             }
         }
         return ResponseEntity.status(HttpStatus.OK).body("Not found");
+    }
+
+    public ResponseEntity<?> createCommentFallback(Throwable t) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body("Bạn chỉ có thể 4 req trong 10s.");
+    }
+
+    public ResponseEntity<?> createLoginFallback(Throwable t) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body("Bạn chỉ có thể 10 req trong 1p.");
     }
 }
