@@ -16,7 +16,7 @@ services:
       - 6380:6379
 
   service-user:
-    image: cuongnguyen806/service-user-img
+    image: service-user-img
     build:
       context: ../UserService
     environment:
@@ -32,7 +32,7 @@ services:
 
   service-product:
 
-    image: cuongnguyen806/service-product-img
+    image: service-product-img
     build:
       context: ../ProductService
     environment:
@@ -41,6 +41,8 @@ services:
       - DB=productservice
       - USER=root
       - PASSWORD=123456
+      - USERSERVICE=service-user
+      - CATCHESSERVICE=service-catches
     depends_on:
       - dbmysql
     ports:
@@ -48,7 +50,7 @@ services:
 
   service-catches:
 
-    image: cuongnguyen806/service-catches-img
+    image: service-catches-img
     build:
       context: ../CatcheService
     environment:
@@ -61,7 +63,7 @@ services:
 
   service-cart:
 
-    image: cuongnguyen806/service-cart-img
+    image: service-cart-img
     build:
       context: ../CartService
     environment:
@@ -70,6 +72,8 @@ services:
       - DB=cartservice
       - USER=root
       - PASSWORD=123456
+      - USERSERVICE=service-user
+      - PRODUCTSERVICE=service-product
     depends_on:
       - dbmysql
     ports:
@@ -77,7 +81,7 @@ services:
 
   service-order:
 
-    image: cuongnguyen806/service-order-img
+    image: service-order-img
     build:
       context: ../OrderService
     environment:
@@ -86,6 +90,8 @@ services:
       - DB=orderservice
       - USER=root
       - PASSWORD=123456
+      - USERSERVICE=service-user
+      - CARTSERVICE=service-cart
     depends_on:
       - dbmysql
     ports:
@@ -93,7 +99,7 @@ services:
 
   service-apigateway:
 
-    image: cuongnguyen806/service-apigateway-img
+    image: service-apigateway-img
     build:
       context: ../ApiGateWay
     depends_on:
